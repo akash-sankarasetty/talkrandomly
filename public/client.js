@@ -14,10 +14,16 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     localVideo.srcObject = stream;
 
     ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-
+        let rawData = event.data;
+    
+        if (rawData instanceof Blob) {
+            rawData = await rawData.text();
+        }
+    
+        const data = JSON.parse(rawData);
+    
         if (data.type === 'match') {
-            startPeerConnection(stream);
+            startPeerConnection(localVideo.srcObject);
         } else if (data.type === 'offer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
@@ -36,6 +42,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             if (peerConnection) peerConnection.close();
         }
     };
+    
 });
 
 function startPeerConnection(stream) {
