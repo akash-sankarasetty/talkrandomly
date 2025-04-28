@@ -46,6 +46,9 @@ wss.on('connection', (ws) => {
 
 app.use(express.static('public'));
 
-server.listen(3000, () => {
-    console.log('Server started on http://localhost:3000');
+// Use dynamic port from Render environment variable
+const PORT = process.env.PORT || 3000;
+
+server.listen(PORT, () => {
+    console.log(`Server started on http://localhost:${PORT}`);
 });

@@ -4,7 +4,8 @@ const chat = document.getElementById('chat');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 
-const ws = new WebSocket(`ws://${window.location.host}`);
+const ws = new WebSocket(`wss://${window.location.host}`);
+
 let peerConnection;
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 

@@ -2,22 +2,40 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Omegle Clone</title>
     <style>
-        video { width: 45%; }
-        #chat { height: 150px; overflow-y: auto; border: 1px solid #ccc; margin-top: 10px; padding: 5px; }
+        video {
+            width: 45%;
+            margin: 10px;
+            border: 2px solid black;
+        }
+        #chat {
+            width: 100%;
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+        #messageInput {
+            width: 80%;
+            padding: 10px;
+        }
+        #sendBtn {
+            padding: 10px;
+        }
     </style>
 </head>
 <body>
+    <h1>Omegle Clone</h1>
+    <div id="videos">
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+    </div>
+    <div id="chat"></div>
+    <input type="text" id="messageInput" placeholder="Type a message...">
+    <button id="sendBtn">Send</button>
 
-<h1>Omegle Clone</h1>
-<video id="localVideo" autoplay muted></video>
-<video id="remoteVideo" autoplay></video>
-
-<div id="chat"></div>
-<input type="text" id="messageInput" placeholder="Type a message..." />
-<button id="sendBtn">Send</button>
-
-<script src="client.js"></script>
+    <script src="client.js"></script>
 </body>
 </html>
