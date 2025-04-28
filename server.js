@@ -13,8 +13,9 @@ wss.on('connection', (ws) => {
     ws.id = uuidv4();
     ws.partner = null;
 
+    console.log(`New user connected: ${ws.id}`);
+
     if (waitingUser) {
-        // Pair the users
         ws.partner = waitingUser;
         waitingUser.partner = ws;
 
@@ -27,14 +28,14 @@ wss.on('connection', (ws) => {
     }
 
     ws.on('message', (message) => {
-        // Forward messages to the partner
-        if (ws.partner) {
+        if (ws.partner && ws.partner.readyState === WebSocket.OPEN) {
             ws.partner.send(message);
         }
     });
 
     ws.on('close', () => {
-        if (ws.partner) {
+        console.log(`User disconnected: ${ws.id}`);
+        if (ws.partner && ws.partner.readyState === WebSocket.OPEN) {
             ws.partner.send(JSON.stringify({ type: 'partner_left' }));
             ws.partner.partner = null;
         }
@@ -46,9 +47,7 @@ wss.on('connection', (ws) => {
 
 app.use(express.static('public'));
 
-// Use dynamic port from Render environment variable
 const PORT = process.env.PORT || 3000;
-
 server.listen(PORT, () => {
     console.log(`Server started on http://localhost:${PORT}`);
 });
