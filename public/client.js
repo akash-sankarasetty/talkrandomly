@@ -8,6 +8,7 @@ const ws = new WebSocket(`wss://${window.location.host}`);
 
 let peerConnection;
 let localStream;
+let isCaller = false;  // <-- IMPORTANT: New flag!
 
 const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
@@ -18,27 +19,26 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 
     ws.onmessage = async (event) => {
         let rawData = event.data;
-
         if (rawData instanceof Blob) {
             rawData = await rawData.text();
         }
-
         const data = JSON.parse(rawData);
 
         if (data.type === 'match') {
             startPeerConnection(localStream);
+            isCaller = true;  // Only caller creates offer
+            if (isCaller) {
+                createAndSendOffer();
+            }
         } else if (data.type === 'offer') {
-            if (!peerConnection) startPeerConnection(localStream);
+            startPeerConnection(localStream);
+            isCaller = false;
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
             ws.send(JSON.stringify({ type: 'answer', answer }));
         } else if (data.type === 'answer') {
-            if (peerConnection.signalingState === 'have-local-offer') {
-                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-            } else {
-                console.warn('Unexpected answer received, state:', peerConnection.signalingState);
-            }
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
         } else if (data.type === 'candidate') {
             if (data.candidate && peerConnection) {
                 await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -60,6 +60,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 });
 
 function startPeerConnection(stream) {
+    if (peerConnection) return; // prevent multiple connections
     peerConnection = new RTCPeerConnection(config);
 
     stream.getTracks().forEach(track => {
@@ -75,7 +76,9 @@ function startPeerConnection(stream) {
     peerConnection.ontrack = (event) => {
         remoteVideo.srcObject = event.streams[0];
     };
+}
 
+function createAndSendOffer() {
     peerConnection.createOffer()
     .then(offer => {
         return peerConnection.setLocalDescription(offer);
