@@ -8,9 +8,12 @@ const ws = new WebSocket(`wss://${window.location.host}`);
 
 let peerConnection;
 let localStream;
-let isCaller = false;  // <-- IMPORTANT: New flag!
+let remoteStream;
+let isCaller = false;
 
-const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+const config = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+};
 
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 .then(stream => {
@@ -25,18 +28,18 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         const data = JSON.parse(rawData);
 
         if (data.type === 'match') {
-            startPeerConnection(localStream);
-            isCaller = true;  // Only caller creates offer
+            startPeerConnection();
+            isCaller = true;
             if (isCaller) {
                 createAndSendOffer();
             }
         } else if (data.type === 'offer') {
-            startPeerConnection(localStream);
+            startPeerConnection();
             isCaller = false;
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
             await peerConnection.setLocalDescription(answer);
-            ws.send(JSON.stringify({ type: 'answer', answer }));
+            ws.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription }));
         } else if (data.type === 'answer') {
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
         } else if (data.type === 'candidate') {
@@ -59,30 +62,36 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     console.error('Error accessing media devices.', error);
 });
 
-function startPeerConnection(stream) {
-    if (peerConnection) return; // prevent multiple connections
+function startPeerConnection() {
+    if (peerConnection) return;
+
     peerConnection = new RTCPeerConnection(config);
 
-    stream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, stream);
+    // Add local stream tracks
+    localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
     });
+
+    // Prepare remote stream
+    remoteStream = new MediaStream();
+    remoteVideo.srcObject = remoteStream;
+
+    peerConnection.ontrack = (event) => {
+        event.streams[0].getTracks().forEach(track => {
+            remoteStream.addTrack(track);
+        });
+    };
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
     };
-
-    peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-    };
 }
 
 function createAndSendOffer() {
     peerConnection.createOffer()
-    .then(offer => {
-        return peerConnection.setLocalDescription(offer);
-    })
+    .then(offer => peerConnection.setLocalDescription(offer))
     .then(() => {
         ws.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription }));
     })
