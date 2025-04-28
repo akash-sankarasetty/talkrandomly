@@ -11,15 +11,14 @@ let localStream;
 let remoteStream;
 let isCaller = false;
 
-const config = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-};
+const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
 navigator.mediaDevices.getUserMedia({ video: true, audio: true })
 .then(stream => {
     localStream = stream;
-    localVideo.srcObject = stream;
+    localVideo.srcObject = stream;  // Show local video
 
+    // Wait for WebSocket messages
     ws.onmessage = async (event) => {
         let rawData = event.data;
         if (rawData instanceof Blob) {
@@ -53,7 +52,7 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             if (peerConnection) {
                 peerConnection.close();
                 peerConnection = null;
-                remoteVideo.srcObject = null;
+                remoteVideo.srcObject = null; // Reset remote video
             }
         }
     };
@@ -62,33 +61,35 @@ navigator.mediaDevices.getUserMedia({ video: true, audio: true })
     console.error('Error accessing media devices.', error);
 });
 
+// Create the peer connection and handle tracks
 function startPeerConnection() {
     if (peerConnection) return;
 
     peerConnection = new RTCPeerConnection(config);
 
-    // Add local stream tracks
+    // Add the local stream's tracks to peer connection
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
     });
 
-    // Prepare remote stream
-    remoteStream = new MediaStream();
-    remoteVideo.srcObject = remoteStream;
-
-    peerConnection.ontrack = (event) => {
-        event.streams[0].getTracks().forEach(track => {
-            remoteStream.addTrack(track);
-        });
-    };
-
+    // Handle ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
     };
+
+    // Handle remote tracks (this is where the stranger's video will come from)
+    peerConnection.ontrack = (event) => {
+        if (!remoteStream) {
+            remoteStream = new MediaStream();
+            remoteVideo.srcObject = remoteStream; // Bind to remote video element
+        }
+        remoteStream.addTrack(event.track); // Add the remote track to the stream
+    };
 }
 
+// Create and send an offer to the remote peer
 function createAndSendOffer() {
     peerConnection.createOffer()
     .then(offer => peerConnection.setLocalDescription(offer))
@@ -100,6 +101,7 @@ function createAndSendOffer() {
     });
 }
 
+// Send text message
 sendBtn.onclick = () => {
     const text = messageInput.value;
     if (text.trim() !== '') {
@@ -109,6 +111,7 @@ sendBtn.onclick = () => {
     }
 };
 
+// Display chat messages
 function addChatMessage(message) {
     const div = document.createElement('div');
     div.textContent = message;
