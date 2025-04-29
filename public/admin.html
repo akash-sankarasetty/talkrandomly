@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Panel - Video Chat Monitor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background: #f5f5f5;
+        }
+    </style>
+</head>
+<body>
+    <h1>Admin Panel</h1>
+    <p>Monitoring all active rooms:</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Room ID</th>
+                <th>User 1 ID</th>
+                <th>User 2 ID</th>
+            </tr>
+        </thead>
+        <tbody id="roomTable">
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchRoomStatus() {
+            const res = await fetch('/admin/status');
+            const rooms = await res.json();
+
+            const tableBody = document.getElementById('roomTable');
+            tableBody.innerHTML = '';
+
+            rooms.forEach(room => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${room.roomId}</td>
+                    <td>${room.user1}</td>
+                    <td>${room.user2}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+
+        setInterval(fetchRoomStatus, 3000); // Refresh every 3 seconds
+        fetchRoomStatus(); // Initial load
+    </script>
+</body>
+</html>
