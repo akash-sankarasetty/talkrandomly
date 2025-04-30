@@ -43,21 +43,18 @@ function startCamera() {
                     isCaller = true;
                     startPeerConnection();
                     createAndSendOffer();  // Only caller sends offer
-                }
-                else if (data.type === 'offer') {
+                } else if (data.type === 'offer') {
                     isCaller = false;
                     startPeerConnection();
                     await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
                     const answer = await peerConnection.createAnswer();
                     await peerConnection.setLocalDescription(answer);
                     ws.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription }));
-                }
-                else if (data.type === 'answer') {
+                } else if (data.type === 'answer') {
                     if (peerConnection.signalingState === 'have-local-offer') {
                         await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
                     }
-                }
-                else if (data.type === 'candidate') {
+                } else if (data.type === 'candidate') {
                     if (data.candidate && peerConnection) {
                         try {
                             await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
@@ -65,11 +62,9 @@ function startCamera() {
                             console.error('Error adding ICE candidate:', e);
                         }
                     }
-                }
-                else if (data.type === 'text') {
+                } else if (data.type === 'text') {
                     addChatMessage(`Stranger: ${data.text}`);
-                }
-                else if (data.type === 'partner_left') {
+                } else if (data.type === 'partner_left') {
                     addChatMessage('Stranger left the chat.');
                     if (peerConnection) {
                         peerConnection.close();
@@ -104,6 +99,7 @@ function startPeerConnection() {
 
     // Handle remote track
     peerConnection.ontrack = (event) => {
+        console.log('Received remote track:', event.track);
         if (!remoteStream) {
             remoteStream = new MediaStream();
             remoteVideo.srcObject = remoteStream;
