@@ -31,6 +31,7 @@ function startCamera() {
         .then(stream => {
             localStream = stream;
             localVideo.srcObject = stream;
+
             detectNSFW(); // Start NSFW loop
 
             ws.onmessage = async (event) => {
@@ -154,10 +155,11 @@ function detectNSFW() {
             const result = predictions[0];
             const shouldHide = ['Porn', 'Hentai', 'Sexy'].includes(result.className) && result.probability > 0.7;
 
+            // Show flower overlay if NSFW content is detected
             flowerOverlay.style.display = shouldHide ? 'block' : 'none';
         }).catch(console.error);
 
-        requestAnimationFrame(analyzeFrame); // Use requestAnimationFrame for smoother execution
+        setTimeout(analyzeFrame, 1000);
     }
 
     analyzeFrame();

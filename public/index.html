@@ -4,50 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chat with NSFW Detection</title>
-    <style>
-        #flowerOverlay {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 0, 0, 0.5);
-            text-align: center;
-            font-size: 2em;
-            color: white;
-            padding-top: 20%;
-        }
-        video {
-            width: 100%;
-            max-width: 600px;
-            display: block;
-            margin: auto;
-        }
-        #chat {
-            max-height: 200px;
-            overflow-y: auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-        }
-        #messageInput {
-            width: 80%;
-        }
-        #sendBtn {
-            width: 15%;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="flowerOverlay">NSFW Content Detected</div>
-    <video id="localVideo" autoplay muted></video>
-    <video id="remoteVideo" autoplay></video>
+    <div id="video-container">
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+        <div id="flowerOverlay" style="display: none;">
+            <img src="flower.png" alt="Flower Overlay">
+        </div>
+    </div>
 
-    <div id="chat"></div>
-    <input type="text" id="messageInput" placeholder="Type a message...">
-    <button id="sendBtn">Send</button>
+    <div id="chat">
+        <!-- Chat messages will appear here -->
+    </div>
+    
+    <div id="message-input">
+        <input type="text" id="messageInput" placeholder="Type a message">
+        <button id="sendBtn">Send</button>
+    </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/nsfwjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.1.0/dist/nsfwjs.min.js"></script>
     <script src="client.js"></script>
 </body>
 </html>
