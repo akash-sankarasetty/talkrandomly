@@ -20,10 +20,10 @@ const config = {
 // Load NSFW model
 nsfwjs.load().then(model => {
     nsfwModel = model;
-    console.log("NSFWJS model loaded.");
+    console.log("✅ NSFWJS model loaded.");
     startCamera();
 }).catch(err => {
-    console.error("Failed to load NSFWJS model:", err);
+    console.error("❌ Failed to load NSFWJS model:", err);
 });
 
 function startCamera() {
@@ -85,28 +85,28 @@ function startPeerConnection() {
 
     peerConnection = new RTCPeerConnection(config);
 
-    // Add local tracks
+    // ✅ Add local tracks BEFORE offer/answer
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
     });
 
-    // Handle ICE candidates
+    // ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
     };
 
-    // Handle remote track
+    // Handle remote stream
     peerConnection.ontrack = (event) => {
-        console.log('Received remote track:', event.track);
+        console.log("🎥 Received remote track:", event.track.kind);
         if (!remoteStream) {
             remoteStream = new MediaStream();
             remoteVideo.srcObject = remoteStream;
         }
         remoteStream.addTrack(event.track);
     };
-}
+} // ✅ FIXED: Missing closing brace was here!
 
 function createAndSendOffer() {
     peerConnection.createOffer()
@@ -151,7 +151,6 @@ function detectNSFW() {
             const result = predictions[0];
             const shouldHide = ['Porn', 'Hentai', 'Sexy'].includes(result.className) && result.probability > 0.7;
 
-            // Show flower overlay if NSFW content is detected
             flowerOverlay.style.display = shouldHide ? 'block' : 'none';
         }).catch(console.error);
 
