@@ -7,24 +7,37 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="video-container">
-        <video id="localVideo" autoplay muted playsinline style="width: 300px; height: 300px; background: black;"></video>
-<video id="remoteVideo" autoplay playsinline style="width: 300px; height: 300px; background: black;"></video>
-<div id="flowerOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 300px; height: 300px; background: url('flower.png') no-repeat center center; background-size: cover;"></div>
+    <div id="video-container" style="position: relative; display: flex; gap: 20px;">
+        <!-- Local Video -->
+        <div style="position: relative;">
+            <video id="localVideo" autoplay muted playsinline style="width: 300px; height: 300px; background: black;"></video>
+        </div>
 
-            <img src="flower.jpeg" alt="Flower Overlay">
+        <!-- Remote Video -->
+        <div style="position: relative;">
+            <video id="remoteVideo" autoplay playsinline style="width: 300px; height: 300px; background: black;"></video>
+            <div id="flowerOverlay" style="display: none; position: absolute; top: 0; left: 0; width: 300px; height: 300px; background: url('flower.png') no-repeat center center; background-size: cover;"></div>
         </div>
     </div>
 
-    <div id="chat">
+    <!-- Chat Section -->
+    <div id="chat" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto;">
         <!-- Chat messages will appear here -->
     </div>
     
-    <div id="message-input">
-        <input type="text" id="messageInput" placeholder="Type a message">
-        <button id="sendBtn">Send</button>
+    <!-- Message Input -->
+    <div id="message-input" style="margin-top: 10px; display: flex; gap: 10px;">
+        <input type="text" id="messageInput" placeholder="Type a message" style="flex: 1; padding: 5px;">
+        <button id="sendBtn" style="padding: 5px 10px;">Send</button>
     </div>
 
+    <!-- Control Buttons -->
+    <div id="controls" style="margin-top: 20px; display: flex; gap: 10px;">
+        <button id="startChatBtn" style="padding: 10px 20px;">Start Chat</button>
+        <button id="nextBtn" style="padding: 10px 20px;">Next</button>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.1.0/dist/nsfwjs.min.js"></script>
     <script src="client.js"></script>
 </body>
