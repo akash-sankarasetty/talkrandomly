@@ -4,8 +4,8 @@ const flowerOverlay = document.getElementById('flowerOverlay');
 const chat = document.getElementById('chat');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
-const startChatBtn = document.getElementById('startChatBtn'); // New Start Chat button
-const nextBtn = document.getElementById('nextBtn'); // New Next button
+const startChatBtn = document.getElementById('startChatBtn');
+const nextBtn = document.getElementById('nextBtn');
 
 const ws = new WebSocket(`wss://${window.location.host}`);
 
@@ -33,14 +33,13 @@ function startCamera() {
         .then(stream => {
             localStream = stream;
             localVideo.srcObject = stream;
-            detectNSFW(); // Start NSFW loop
+            detectNSFW();
         })
         .catch(error => {
             console.error('Error accessing media devices:', error);
         });
 }
 
-// Start chat when user clicks "Start Chat"
 startChatBtn.onclick = () => {
     if (!localStream) {
         alert("Please allow camera and microphone access to start chatting.");
@@ -50,7 +49,6 @@ startChatBtn.onclick = () => {
     console.log("🔄 Searching for a stranger...");
 };
 
-// Handle WebSocket messages
 ws.onmessage = async (event) => {
     let rawData = event.data;
     if (rawData instanceof Blob) rawData = await rawData.text();
@@ -60,7 +58,7 @@ ws.onmessage = async (event) => {
         console.log("✅ Matched with a stranger!");
         isCaller = true;
         startPeerConnection();
-        createAndSendOffer(); // Only caller sends offer
+        createAndSendOffer();
     } else if (data.type === 'offer') {
         isCaller = false;
         startPeerConnection();
@@ -94,7 +92,6 @@ ws.onmessage = async (event) => {
     }
 };
 
-// Handle "Next" button to skip current stranger
 nextBtn.onclick = () => {
     if (peerConnection) {
         peerConnection.close();
@@ -106,36 +103,46 @@ nextBtn.onclick = () => {
     console.log("🔄 Searching for a new stranger...");
 };
 
-// Start peer connection
 function startPeerConnection() {
     if (peerConnection) return;
 
     peerConnection = new RTCPeerConnection(config);
 
-    // Add local tracks
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
     });
 
-    // ICE candidates
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
     };
 
-    // Handle remote stream
     peerConnection.ontrack = (event) => {
         console.log("🎥 Received remote track:", event.track.kind);
-        if (!remoteStream) {
-            remoteStream = new MediaStream();
-            remoteVideo.srcObject = remoteStream;
+
+        // Use stream directly from event
+        if (event.streams && event.streams[0]) {
+            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.play().catch(e => console.error("Remote video play failed:", e));
+            console.log("👤 Remote stream set directly from event.");
+        } else {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                remoteVideo.srcObject = remoteStream;
+            }
+            if (!remoteStream.getTracks().includes(event.track)) {
+                remoteStream.addTrack(event.track);
+            }
+            remoteVideo.play().catch(e => console.error("Remote video play failed:", e));
         }
-        remoteStream.addTrack(event.track);
+    };
+
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log("ICE Connection State:", peerConnection.iceConnectionState);
     };
 }
 
-// Create and send offer
 function createAndSendOffer() {
     peerConnection.createOffer()
         .then(offer => peerConnection.setLocalDescription(offer))
@@ -147,7 +154,6 @@ function createAndSendOffer() {
         });
 }
 
-// Send chat messages
 sendBtn.onclick = () => {
     const text = messageInput.value.trim();
     if (text !== '') {
@@ -157,7 +163,6 @@ sendBtn.onclick = () => {
     }
 };
 
-// Add chat messages to the chat box
 function addChatMessage(message) {
     const div = document.createElement('div');
     div.textContent = message;
@@ -165,38 +170,36 @@ function addChatMessage(message) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// NSFW Detection Loop
 function detectNSFW() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     function analyzeFrame() {
         if (!localStream || !nsfwModel || localVideo.videoWidth === 0 || localVideo.videoHeight === 0) {
-            setTimeout(analyzeFrame, 1000); // Retry after 1 second
+            setTimeout(analyzeFrame, 1000);
             return;
         }
-    
+
         canvas.width = localVideo.videoWidth;
         canvas.height = localVideo.videoHeight;
         ctx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-    
+
         nsfwModel.classify(canvas).then(predictions => {
             const result = predictions[0];
             const shouldHide = ['Porn', 'Hentai', 'Sexy'].includes(result.className) && result.probability > 0.7;
-    
-            // Show or hide the flower overlay
+
             flowerOverlay.style.display = shouldHide ? 'block' : 'none';
-    
+
             if (shouldHide) {
                 console.warn("⚠️ NSFW content detected!");
             }
         }).catch(console.error);
-    
+
         setTimeout(analyzeFrame, 1000);
     }
 
     analyzeFrame();
 }
 
-// Start the camera on page load
+// Initialize camera on page load
 startCamera();
