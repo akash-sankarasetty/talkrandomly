@@ -36,6 +36,7 @@
             gap: 15px;
             margin: 20px 10px;
             width: 100%;
+            position: relative;
         }
 
         video {
@@ -44,6 +45,17 @@
             background: #000;
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #flowerOverlay {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            top: 40%;
+            left: 15%;
+            display: none;
+            z-index: 5;
+            pointer-events: none;
         }
 
         .chat-container {
@@ -95,7 +107,6 @@
             background-color: #357ab8;
         }
 
-        /* Responsive Adjustments */
         @media (max-width: 768px) {
             video {
                 width: 90%;
@@ -117,6 +128,7 @@
     <div class="video-container">
         <video id="localVideo" autoplay muted playsinline></video>
         <video id="remoteVideo" autoplay playsinline></video>
+        <img id="flowerOverlay" src="flower.png" alt="flower" />
     </div>
 
     <div class="chat-container">
@@ -127,6 +139,11 @@
         </div>
     </div>
 
+    <!-- NSFW detection libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.4.0"></script>
+
+    <!-- Client-side WebRTC logic -->
     <script src="client.js"></script>
 </body>
 </html>
