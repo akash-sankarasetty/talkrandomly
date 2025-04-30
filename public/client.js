@@ -26,7 +26,7 @@ nsfwjs.load().then(model => {
     console.error("❌ Failed to load NSFWJS model:", err);
 });
 
-// Start camera and wait for user to start chat
+// Start local camera
 function startCamera() {
     navigator.mediaDevices.getUserMedia({ video: true, audio: true })
         .then(stream => {
@@ -81,21 +81,13 @@ ws.onmessage = async (event) => {
         addChatMessage(`Stranger: ${data.text}`);
     } else if (data.type === 'partner_left') {
         addChatMessage('Stranger left the chat.');
-        if (peerConnection) {
-            peerConnection.close();
-            peerConnection = null;
-        }
-        remoteVideo.srcObject = null;
+        cleanupConnection();
         alert("The stranger has left. Click 'Next' to find a new match.");
     }
 };
 
 nextBtn.onclick = () => {
-    if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-    }
-    remoteVideo.srcObject = null;
+    cleanupConnection();
     ws.send(JSON.stringify({ type: 'next' }));
     console.log("🔄 Searching for a new stranger...");
 };
@@ -105,20 +97,24 @@ function startPeerConnection() {
 
     peerConnection = new RTCPeerConnection(config);
 
+    // Add all local tracks
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
+    });
+
+    // Use addEventListener for track event
+    peerConnection.addEventListener('track', event => {
+        console.log("🎥 Received remote track via addEventListener:", event.track.kind);
+        if (!remoteVideo.srcObject || remoteVideo.srcObject.id !== event.streams[0].id) {
+            remoteVideo.srcObject = event.streams[0];
+            console.log("✅ Remote video stream set.");
+        }
     });
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
-    };
-
-    peerConnection.ontrack = (event) => {
-        console.log("🎥 Received remote track:", event.track.kind);
-        remoteVideo.srcObject = event.streams[0];
-        console.log("✅ Remote video stream set directly from event.streams[0]");
     };
 
     peerConnection.oniceconnectionstatechange = () => {
@@ -153,6 +149,14 @@ function addChatMessage(message) {
     chat.scrollTop = chat.scrollHeight;
 }
 
+function cleanupConnection() {
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    remoteVideo.srcObject = null;
+}
+
 function detectNSFW() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -184,5 +188,5 @@ function detectNSFW() {
     analyzeFrame();
 }
 
-// Initialize camera on page load
+// Start camera
 startCamera();
