@@ -171,22 +171,27 @@ function detectNSFW() {
     const ctx = canvas.getContext('2d');
 
     function analyzeFrame() {
-        if (!localStream || !nsfwModel) return;
-
+        if (!localStream || !nsfwModel || localVideo.videoWidth === 0 || localVideo.videoHeight === 0) {
+            setTimeout(analyzeFrame, 1000); // Retry after 1 second
+            return;
+        }
+    
         canvas.width = localVideo.videoWidth;
         canvas.height = localVideo.videoHeight;
         ctx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-
+    
         nsfwModel.classify(canvas).then(predictions => {
             const result = predictions[0];
             const shouldHide = ['Porn', 'Hentai', 'Sexy'].includes(result.className) && result.probability > 0.7;
-
+    
+            // Show or hide the flower overlay
             flowerOverlay.style.display = shouldHide ? 'block' : 'none';
+    
             if (shouldHide) {
                 console.warn("⚠️ NSFW content detected!");
             }
         }).catch(console.error);
-
+    
         setTimeout(analyzeFrame, 1000);
     }
 
