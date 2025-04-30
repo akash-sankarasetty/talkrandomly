@@ -11,7 +11,6 @@ const ws = new WebSocket(`wss://${window.location.host}`);
 
 let peerConnection;
 let localStream;
-let remoteStream;
 let isCaller = false;
 let nsfwModel;
 
@@ -87,7 +86,6 @@ ws.onmessage = async (event) => {
             peerConnection = null;
         }
         remoteVideo.srcObject = null;
-        remoteStream = null;
         alert("The stranger has left. Click 'Next' to find a new match.");
     }
 };
@@ -98,7 +96,6 @@ nextBtn.onclick = () => {
         peerConnection = null;
     }
     remoteVideo.srcObject = null;
-    remoteStream = null;
     ws.send(JSON.stringify({ type: 'next' }));
     console.log("🔄 Searching for a new stranger...");
 };
@@ -120,22 +117,8 @@ function startPeerConnection() {
 
     peerConnection.ontrack = (event) => {
         console.log("🎥 Received remote track:", event.track.kind);
-
-        // Use stream directly from event
-        if (event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-            remoteVideo.play().catch(e => console.error("Remote video play failed:", e));
-            console.log("👤 Remote stream set directly from event.");
-        } else {
-            if (!remoteStream) {
-                remoteStream = new MediaStream();
-                remoteVideo.srcObject = remoteStream;
-            }
-            if (!remoteStream.getTracks().includes(event.track)) {
-                remoteStream.addTrack(event.track);
-            }
-            remoteVideo.play().catch(e => console.error("Remote video play failed:", e));
-        }
+        remoteVideo.srcObject = event.streams[0];
+        console.log("✅ Remote video stream set directly from event.streams[0]");
     };
 
     peerConnection.oniceconnectionstatechange = () => {
