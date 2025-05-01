@@ -12,33 +12,96 @@ body {
 #localVideo, #remoteVideo {
     width: 45%;
     border: 2px solid #ccc;
+    object-fit: cover; /* Added to maintain aspect ratio */
 }
 
-#flowerOverlay img {
-    position: absolute;
+#flowerOverlay {
+    position: fixed;
     top: 0;
     left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
+    width: 100vw;
+    height: 100vh;
+    background: url('flower.jpeg') no-repeat center center;
+    background-size: cover;
+    z-index: 10;
+    display: none;
 }
+
 
 #chat {
     margin-top: 20px;
     max-height: 300px;
     overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    background-color: #f9f9f9;
 }
 
 #message-input {
     margin-top: 10px;
+    display: flex;
+    gap: 10px;
 }
 
 #message-input input {
-    width: 80%;
+    flex: 1;
     padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 
 #message-input button {
     padding: 10px 20px;
     cursor: pointer;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+#message-input button:hover {
+    background-color: #0056b3;
+}
+
+
+#controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center; /* Center the buttons */
+}
+
+#startChatBtn, #nextBtn {
+    padding: 10px 20px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    background-color: #28a745;
+    color: white;
+}
+
+#startChatBtn:hover {
+    background-color: #218838;
+}
+
+#nextBtn {
+    background-color: #dc3545;
+    color: white;
+}
+
+#nextBtn:hover {
+    background-color: #c82333;
+}
+
+#nextBtn:disabled {
+    background-color: #6c757d;
+    cursor: not-allowed;
+}
+
+#searchingMessage {
+    color: #6c757d;
+    font-style: italic;
+    margin-top: 10px;
+    text-align: center;
 }

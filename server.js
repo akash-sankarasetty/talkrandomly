@@ -24,13 +24,45 @@ wss.on('connection', (ws) => {
         console.log('✅ Matched two clients');
     } else {
         waitingClients.push(ws);
+        ws.send(JSON.stringify({ type: 'waiting' })); //send waiting message
         console.log('⏳ Client waiting for match');
     }
 
     ws.on('message', (message) => {
-        const partner = pairs.get(ws);
-        if (partner && partner.readyState === WebSocket.OPEN) {
-            partner.send(message);
+        try {
+            const parsedMessage = JSON.parse(message);
+             if (parsedMessage.type === 'next') {
+                const partner = pairs.get(ws);
+                if (partner && partner.readyState === WebSocket.OPEN) {
+                    partner.send(JSON.stringify({ type: 'partner_left' }));
+                    pairs.delete(partner);
+                    pairs.delete(ws);
+                } else if (waitingClients.includes(ws)) {
+                    const index = waitingClients.indexOf(ws);
+                    if (index !== -1) waitingClients.splice(index, 1);
+                }
+                waitingClients.push(ws);
+                ws.send(JSON.stringify({ type: 'waiting' }));
+                console.log('🔄 Client requesting next match');
+
+                 if (waitingClients.length >= 2) {
+                    const partner1 = waitingClients.shift();
+                    const partner2 = waitingClients.shift();
+                    pairs.set(partner1, partner2);
+                    pairs.set(partner2, partner1);
+                    partner1.send(JSON.stringify({ type: 'match' }));
+                    partner2.send(JSON.stringify({ type: 'match' }));
+                    console.log('✅ Matched two waiting clients after "next"');
+                }
+                return;
+            }
+
+            const partner = pairs.get(ws);
+            if (partner && partner.readyState === WebSocket.OPEN) {
+                partner.send(message);
+            }
+        } catch (error) {
+            console.error('Failed to parse message or handle:', error);
         }
     });
 
