@@ -33,25 +33,31 @@ nsfwjs.load().then(model => {
 
 // Start local camera
 function startCamera() {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    return navigator.mediaDevices.getUserMedia({ video: true, audio: true }) // Return the promise
         .then(stream => {
             localStream = stream;
             localVideo.srcObject = stream;
             detectNSFW();
+            return stream; // Return the stream
         })
         .catch(error => {
             console.error('Error accessing media devices:', error);
             alert("Please grant camera and microphone permissions to use this application.");
             startChatBtn.disabled = false; //Re-enable start chat
+            throw error; // Re-throw the error to prevent further execution
         });
 }
 
 startChatBtn.onclick = () => {
     if (!localStream) {
-        alert("Please allow camera and microphone access to start chatting.");
-        return;
-    }
-    if (!isChatting) {
+        startCamera().then(() => { //chain
+            ws.send(JSON.stringify({ type: 'start_chat' }));
+            console.log("🔄 Searching for a stranger...");
+            startChatBtn.disabled = true;
+            nextBtn.disabled = true;
+            searchingMessageElement.style.display = 'block';
+        }).catch(()=>{});
+    } else if (!isChatting) {
         ws.send(JSON.stringify({ type: 'start_chat' }));
         console.log("🔄 Searching for a stranger...");
         startChatBtn.disabled = true;
@@ -153,7 +159,8 @@ function startPeerConnection() {
         if (event.streams && event.streams.length > 0) {
             const remoteStream = event.streams[0];
             console.log("   Remote stream ID:", remoteStream.id);
-             console.log("   Remote stream tracks:", remoteStream.getTracks().map(track => track.kind));
+            console.log("   Remote stream tracks:", remoteStream.getTracks().map(track => track.kind));
+
             if (!remoteVideo.srcObject || remoteVideo.srcObject.id !== remoteStream.id) {
                 remoteVideo.srcObject = remoteStream;
                 console.log("✅ Remote video stream set. srcObject ID:", remoteVideo.srcObject.id);
@@ -161,7 +168,7 @@ function startPeerConnection() {
                 console.log("⚠️ Remote video stream already set or same ID.");
             }
         } else {
-             console.warn("⚠️ No streams in the track event!");
+            console.warn("⚠️ No streams in the track event!");
         }
     });
 
