@@ -17,7 +17,10 @@ let nsfwModel;
 let isChatting = false;
 
 const config = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:your-turn-server.com', username: 'user', credential: 'pass' }
+    ]
 };
 
 // Load NSFW model
@@ -192,35 +195,26 @@ function startPeerConnection() {
     });
 
     // Use addEventListener for track event
-    peerConnection.addEventListener('track', event => {
-        console.log("🎥 [Client] Received remote track via addEventListener:", event.track.kind);
-        console.log("  [Client] Event:", event);
-        if (event.streams && event.streams.length > 0) {
-            const remoteStream = event.streams[0];
-            console.log("  [Client] Remote stream ID:", remoteStream.id);
-            console.log("  [Client] Remote stream tracks:", remoteStream.getTracks().map(track => track.kind));
-
-            const remoteVideoTrack = remoteStream.getVideoTracks()[0];
-            if (remoteVideoTrack) {
-                console.log("  [Client] Found remote video track:", remoteVideoTrack);
-            } else {
-                console.warn("  [Client] No remote video track found in the stream.");
-            }
-
-            if (!remoteVideo.srcObject || remoteVideo.srcObject.id !== remoteStream.id) {
-                remoteVideo.srcObject = remoteStream;
-                console.log("✅ [Client] Remote video stream set. srcObject ID:", remoteVideo.srcObject.id);
-            } else {
-                console.log("⚠️ [Client] Remote video stream already set or same ID.");
-            }
-        } else {
-            console.warn("⚠️ [Client] No streams in the track event!");
+    peerConnection.addEventListener('track', (event) => {
+        console.log('🎥 Remote track received:', event.track.kind);
+        if (event.streams.length > 0) {
+            remoteVideo.srcObject = event.streams[0];
+            console.log('✅ Remote video stream set.');
         }
     });
 
     peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
+            console.log('📤 ICE candidate sent:', event.candidate);
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
+        }
+    };
+    
+    ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === 'candidate') {
+            console.log('📥 ICE candidate received:', data.candidate);
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
     };
 

@@ -1,18 +1,41 @@
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 2s linear infinite;
+    display: inline-block; /* To align with text */
+    margin-right: 5px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 body {
     font-family: Arial, sans-serif;
+    background-color: #e0f7fa; /* Light sky blue background */
+    color: #212121; /* Darker text for better contrast */
+    margin: 0; /* Reset default body margin */
+    padding: 0;
 }
 
 #video-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 10px;
+    margin: 20px; /* Increased margin for better spacing */
 }
 
 #localVideo, #remoteVideo {
     width: 45%;
-    border: 2px solid #ccc;
-    object-fit: cover; /* Added to maintain aspect ratio */
+    border: 2px solid #81d4fa; /* Light blue border */
+    object-fit: cover;
+    border-radius: 10px; /* Rounded corners for video elements */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    background-color: #fff; /* Ensure a white background, in case of transparency issues*/
 }
 
 #flowerOverlay {
@@ -31,77 +54,103 @@ body {
     margin-top: 20px;
     max-height: 300px;
     overflow-y: auto;
-    border: 1px solid #ccc;
-    padding: 10px;
-    background-color: #f9f9f9;
+    border: 1px solid #81d4fa; /* Light blue border */
+    padding: 15px; /* Increased padding */
+    background-color: #f0f4c3; /* Very light yellow for chat background */
+    border-radius: 10px; /* Rounded corners for chat container */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Subtle shadow */
 }
 
 #message-input {
     margin-top: 10px;
     display: flex;
     gap: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
 }
 
 #message-input input {
     flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
+    padding: 12px; /* Increased padding for input */
+    border: 1px solid #81d4fa; /* Light blue border */
     border-radius: 5px;
+    font-size: 16px; /* Increased font size */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.05); /* Inner shadow */
+}
+
+#message-input input:focus {
+    outline: none;
+    border-color: #03a9f4; /* Highlight on focus */
+    box-shadow: 0 0 5px rgba(0, 153, 216, 0.3);
 }
 
 #message-input button {
-    padding: 10px 20px;
+    padding: 12px 20px;
     cursor: pointer;
-    background-color: #007bff;
+    background-color: #03a9f4; /* A brighter blue */
     color: white;
     border: none;
     border-radius: 5px;
+    font-size: 16px;
+    transition: background-color 0.3s ease; /* Smooth transition */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Add shadow */
 }
 
 #message-input button:hover {
-    background-color: #0056b3;
+    background-color: #0288d1; /* Darker shade on hover */
 }
 
 #controls {
     margin-top: 20px;
     display: flex;
-    gap: 10px;
-    justify-content: center; /* Center the buttons */
-    align-items: center; /* Vertically align items */
+    gap: 15px; /* Increased gap */
+    justify-content: center;
+    align-items: center;
+    padding-bottom: 20px;
 }
 
 #startChatBtn, #nextBtn {
-    padding: 10px 20px;
+    padding: 12px 25px;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 18px; /* Increased font size */
     border-radius: 5px;
     border: none;
-    background-color: #28a745;
+    transition: background-color 0.3s ease, transform 0.2s ease; /* Smooth transition and transform */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#startChatBtn {
+    background-color: #4caf50; /* Green */
     color: white;
 }
 
 #startChatBtn:hover {
-    background-color: #218838;
+    background-color: #388e3c; /* Darker green */
+    transform: translateY(-2px);
 }
 
 #nextBtn {
-    background-color: #dc3545;
+    background-color: #f44336; /* Red */
     color: white;
 }
 
 #nextBtn:hover {
-    background-color: #c82333;
+    background-color: #d32f2f; /* Darker red */
+    transform: translateY(-2px);
 }
 
 #nextBtn:disabled {
-    background-color: #6c757d;
+    background-color: #b0bec5; /* Grey */
     cursor: not-allowed;
+    box-shadow: none;
+    transform: translateY(0);
 }
 
 #searchingMessage {
-    color: #6c757d;
+    color: #757575;
     font-style: italic;
-    margin-top: 10px;
+    margin-top: 15px;
     text-align: center;
-    display: none; /* Initially hidden */
+    display: none;
+    font-size: 16px;
 }
