@@ -7,53 +7,69 @@ app.use(express.static('public'));
 
 const wss = new WebSocket.Server({ noServer: true });
 
-const waitingClients = [];
+const waitingClients = new Set(); // Use a Set for easier addition and deletion
 const pairs = new Map(); // Map<ws, ws>
 
-wss.on('connection', (ws) => {
-    console.log('🔌 New client connected');
+function findAndMatch() {
+    if (waitingClients.size >= 2) {
+        const iterator = waitingClients.values();
+        const partner1 = iterator.next().value;
+        waitingClients.delete(partner1);
+        const partner2 = iterator.next().value;
+        waitingClients.delete(partner2);
 
-    if (waitingClients.length > 0) {
-        const partner = waitingClients.pop();
-        pairs.set(ws, partner);
-        pairs.set(partner, ws);
+        pairs.set(partner1, partner2);
+        pairs.set(partner2, partner1);
 
-        ws.send(JSON.stringify({ type: 'match' }));
-        partner.send(JSON.stringify({ type: 'match' }));
-
-        console.log('✅ Matched two clients');
+        if (partner1.readyState === WebSocket.OPEN) {
+            partner1.send(JSON.stringify({ type: 'match' }));
+            console.log('✅ Matched client (after "next"):', partner1._socket.remoteAddress);
+        }
+        if (partner2.readyState === WebSocket.OPEN) {
+            partner2.send(JSON.stringify({ type: 'match' }));
+            console.log('✅ Matched client (after "next"):', partner2._socket.remoteAddress);
+        }
+        console.log('✅ Successfully rematched two waiting clients.');
+    } else if (waitingClients.size === 1) {
+        const waitingClient = waitingClients.values().next().value;
+        if (waitingClient.readyState === WebSocket.OPEN) {
+            waitingClient.send(JSON.stringify({ type: 'waiting' }));
+            console.log('⏳ One client remaining in the waiting list.');
+        }
     } else {
-        waitingClients.push(ws);
-        ws.send(JSON.stringify({ type: 'waiting' })); //send waiting message
-        console.log('⏳ Client waiting for match');
+        console.log('ℹ️ No clients in the waiting list.');
     }
+}
+
+wss.on('connection', (ws) => {
+    console.log('🔌 New client connected:', ws._socket.remoteAddress);
+
+    waitingClients.add(ws);
+    ws.send(JSON.stringify({ type: 'waiting' }));
+    console.log('⏳ Client added to waiting list.');
+    findAndMatch();
 
     ws.on('message', (message) => {
         try {
             const parsedMessage = JSON.parse(message);
-             if (parsedMessage.type === 'next') {
+            if (parsedMessage.type === 'next') {
                 const partner = pairs.get(ws);
-                if (partner && partner.readyState === WebSocket.OPEN) {
-                    partner.send(JSON.stringify({ type: 'partner_left' }));
+                if (partner) {
+                    if (partner.readyState === WebSocket.OPEN) {
+                        partner.send(JSON.stringify({ type: 'partner_left' }));
+                    }
                     pairs.delete(partner);
                     pairs.delete(ws);
-                } else if (waitingClients.includes(ws)) {
-                    const index = waitingClients.indexOf(ws);
-                    if (index !== -1) waitingClients.splice(index, 1);
+                    console.log('💔 Removed pair due to "next" from:', ws._socket.remoteAddress);
+                } else if (waitingClients.has(ws)) {
+                    waitingClients.delete(ws);
+                    console.log('🗑️ Removed from waiting list due to "next":', ws._socket.remoteAddress);
                 }
-                waitingClients.push(ws);
-                ws.send(JSON.stringify({ type: 'waiting' }));
-                console.log('🔄 Client requesting next match');
 
-                 if (waitingClients.length >= 2) {
-                    const partner1 = waitingClients.shift();
-                    const partner2 = waitingClients.shift();
-                    pairs.set(partner1, partner2);
-                    pairs.set(partner2, partner1);
-                    partner1.send(JSON.stringify({ type: 'match' }));
-                    partner2.send(JSON.stringify({ type: 'match' }));
-                    console.log('✅ Matched two waiting clients after "next"');
-                }
+                waitingClients.add(ws);
+                ws.send(JSON.stringify({ type: 'waiting' }));
+                console.log('⏳ Client re-added to waiting list after "next".');
+                findAndMatch();
                 return;
             }
 
@@ -72,14 +88,10 @@ wss.on('connection', (ws) => {
             partner.send(JSON.stringify({ type: 'partner_left' }));
             pairs.delete(partner);
         }
-
         pairs.delete(ws);
-
-        // Remove from waiting list if unmatched
-        const index = waitingClients.indexOf(ws);
-        if (index !== -1) waitingClients.splice(index, 1);
-
-        console.log('❌ Client disconnected');
+        waitingClients.delete(ws);
+        console.log('❌ Client disconnected:', ws._socket.remoteAddress);
+        findAndMatch(); // Try to match any remaining waiting clients
     });
 });
 
