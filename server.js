@@ -23,30 +23,30 @@ function findAndMatch() {
 
         if (partner1.readyState === WebSocket.OPEN) {
             partner1.send(JSON.stringify({ type: 'match' }));
-            console.log('✅ Matched client (after "next"):', partner1._socket.remoteAddress);
+            console.log('✅ [Server] Matched client (after "next"):', partner1._socket.remoteAddress);
         }
         if (partner2.readyState === WebSocket.OPEN) {
             partner2.send(JSON.stringify({ type: 'match' }));
-            console.log('✅ Matched client (after "next"):', partner2._socket.remoteAddress);
+            console.log('✅ [Server] Matched client (after "next"):', partner2._socket.remoteAddress);
         }
-        console.log('✅ Successfully rematched two waiting clients.');
+        console.log('✅ [Server] Successfully rematched two waiting clients.');
     } else if (waitingClients.size === 1) {
         const waitingClient = waitingClients.values().next().value;
         if (waitingClient.readyState === WebSocket.OPEN) {
             waitingClient.send(JSON.stringify({ type: 'waiting' }));
-            console.log('⏳ One client remaining in the waiting list.');
+            console.log('⏳ [Server] One client remaining in the waiting list.');
         }
     } else {
-        console.log('ℹ️ No clients in the waiting list.');
+        console.log('ℹ️ [Server] No clients in the waiting list.');
     }
 }
 
 wss.on('connection', (ws) => {
-    console.log('🔌 New client connected:', ws._socket.remoteAddress);
+    console.log('🔌 [Server] New client connected:', ws._socket.remoteAddress);
 
     waitingClients.add(ws);
     ws.send(JSON.stringify({ type: 'waiting' }));
-    console.log('⏳ Client added to waiting list.');
+    console.log('⏳ [Server] Client added to waiting list.');
     findAndMatch();
 
     ws.on('message', (message) => {
@@ -60,15 +60,15 @@ wss.on('connection', (ws) => {
                     }
                     pairs.delete(partner);
                     pairs.delete(ws);
-                    console.log('💔 Removed pair due to "next" from:', ws._socket.remoteAddress);
+                    console.log('💔 [Server] Removed pair due to "next" from:', ws._socket.remoteAddress);
                 } else if (waitingClients.has(ws)) {
                     waitingClients.delete(ws);
-                    console.log('🗑️ Removed from waiting list due to "next":', ws._socket.remoteAddress);
+                    console.log('🗑️ [Server] Removed from waiting list due to "next":', ws._socket.remoteAddress);
                 }
 
                 waitingClients.add(ws);
                 ws.send(JSON.stringify({ type: 'waiting' }));
-                console.log('⏳ Client re-added to waiting list after "next".');
+                console.log('⏳ [Server] Client re-added to waiting list after "next".');
                 findAndMatch();
                 return;
             }
@@ -78,7 +78,7 @@ wss.on('connection', (ws) => {
                 partner.send(message);
             }
         } catch (error) {
-            console.error('Failed to parse message or handle:', error);
+            console.error('❗ [Server] Failed to parse message or handle:', error);
         }
     });
 
@@ -90,7 +90,7 @@ wss.on('connection', (ws) => {
         }
         pairs.delete(ws);
         waitingClients.delete(ws);
-        console.log('❌ Client disconnected:', ws._socket.remoteAddress);
+        console.log('❌ [Server] Client disconnected:', ws._socket.remoteAddress);
         findAndMatch(); // Try to match any remaining waiting clients
     });
 });

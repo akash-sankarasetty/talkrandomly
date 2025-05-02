@@ -27,7 +27,6 @@ body {
     display: none;
 }
 
-
 #chat {
     margin-top: 20px;
     max-height: 300px;
@@ -63,12 +62,12 @@ body {
     background-color: #0056b3;
 }
 
-
 #controls {
     margin-top: 20px;
     display: flex;
     gap: 10px;
     justify-content: center; /* Center the buttons */
+    align-items: center; /* Vertically align items */
 }
 
 #startChatBtn, #nextBtn {
@@ -104,4 +103,5 @@ body {
     font-style: italic;
     margin-top: 10px;
     text-align: center;
+    display: none; /* Initially hidden */
 }

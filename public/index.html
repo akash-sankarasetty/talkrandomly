@@ -5,6 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Chat with NSFW Detection</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Simple CSS loading animation */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 2s linear infinite;
+            display: inline-block; /* To align with text */
+            margin-right: 5px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div id="video-container" style="position: relative; display: flex; gap: 20px;">
@@ -20,17 +38,17 @@
     <div id="flowerOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: url('flower.jpeg') no-repeat center center; background-size: cover; z-index: 10;"></div>
 
     <div id="chat" style="margin-top: 20px; border: 1px solid #ccc; padding: 10px; height: 200px; overflow-y: auto;">
-        </div>
-    
+    </div>
+
     <div id="message-input" style="margin-top: 10px; display: flex; gap: 10px;">
         <input type="text" id="messageInput" placeholder="Type a message" style="flex: 1; padding: 5px;">
         <button id="sendBtn" style="padding: 5px 10px;">Send</button>
     </div>
 
-    <div id="controls" style="margin-top: 20px; display: flex; gap: 10px;">
+    <div id="controls" style="margin-top: 20px; display: flex; gap: 10px; align-items: center; justify-content: center;">
         <button id="startChatBtn" style="padding: 10px 20px;">Start Chat</button>
         <button id="nextBtn" style="padding: 10px 20px;" disabled>Next</button>
-        <div id="searchingMessage" style="display: none;">🔄 Searching for a stranger...</div>
+        <div id="searchingMessage" style="display: none;"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/nsfwjs@2.1.0/dist/nsfwjs.min.js"></script>
