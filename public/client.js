@@ -19,7 +19,7 @@ let isChatting = false;
 const config = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:your-turn-server.com', username: 'user', credential: 'pass' }
+        { urls: 'turn:turn.anyfirewall.com:443', username: 'webrtc', credential: 'webrtc' }
     ]
 };
 
@@ -32,7 +32,6 @@ nsfwjs.load().then(model => {
     alert("Failed to load NSFW detection model.");
 });
 
-// Start camera
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -49,7 +48,6 @@ async function startCamera() {
     }
 }
 
-// Searching UI
 function showSearchingAnimation() {
     searchingMessageElement.innerHTML = '<div class="loader"></div> Searching for a stranger...';
     searchingMessageElement.style.display = 'block';
@@ -60,7 +58,6 @@ function hideSearchingAnimation() {
     searchingMessageElement.innerHTML = '';
 }
 
-// Start chat
 startChatBtn.onclick = async () => {
     if (!localStream) {
         try {
@@ -84,7 +81,6 @@ startChatBtn.onclick = async () => {
     }
 };
 
-// Next button
 nextBtn.onclick = () => {
     if (isChatting) {
         cleanupConnection();
@@ -98,7 +94,6 @@ nextBtn.onclick = () => {
     }
 };
 
-// WebSocket message handling
 ws.onmessage = async (event) => {
     let rawData = event.data;
     if (rawData instanceof Blob) rawData = await rawData.text();
@@ -174,7 +169,6 @@ ws.onmessage = async (event) => {
     }
 };
 
-// Create Peer Connection
 function startPeerConnection() {
     if (peerConnection) return;
     peerConnection = new RTCPeerConnection(config);
@@ -189,6 +183,8 @@ function startPeerConnection() {
         if (event.streams.length > 0) {
             remoteVideo.srcObject = event.streams[0];
             console.log('✅ Remote video stream set.');
+        } else {
+            console.warn('⚠️ No stream in track event.');
         }
     });
 
@@ -212,7 +208,6 @@ function startPeerConnection() {
     };
 }
 
-// Create and send offer
 async function createAndSendOffer() {
     try {
         const offer = await peerConnection.createOffer();
@@ -225,7 +220,6 @@ async function createAndSendOffer() {
     }
 }
 
-// Chat sending
 sendBtn.onclick = () => {
     const text = messageInput.value.trim();
     if (text && isChatting) {
@@ -244,7 +238,6 @@ messageInput.addEventListener('keypress', (event) => {
     }
 });
 
-// Display chat messages
 function addChatMessage(message) {
     const div = document.createElement('div');
     div.textContent = message;
@@ -252,7 +245,6 @@ function addChatMessage(message) {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// Cleanup
 function cleanupConnection() {
     if (peerConnection) {
         peerConnection.close();
@@ -264,7 +256,6 @@ function cleanupConnection() {
     }
 }
 
-// NSFW detection
 function detectNSFW() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -297,10 +288,8 @@ function detectNSFW() {
     analyzeFrame();
 }
 
-// Auto start camera on load
 startCamera().catch(() => {});
 
-// WebSocket open
 ws.onopen = () => {
     console.log("✅ WebSocket connected.");
     startChatBtn.disabled = false;
@@ -308,7 +297,6 @@ ws.onopen = () => {
     hideSearchingAnimation();
 };
 
-// WebSocket closed
 ws.onclose = () => {
     console.log("❌ WebSocket disconnected.");
     startChatBtn.disabled = true;
@@ -317,7 +305,6 @@ ws.onclose = () => {
     searchingMessageElement.innerHTML = "Connection lost. Refresh the page.";
 };
 
-// WebSocket error
 ws.onerror = (error) => {
     console.error("❗ WebSocket error:", error);
     alert("WebSocket connection error.");
