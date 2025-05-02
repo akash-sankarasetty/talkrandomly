@@ -168,11 +168,27 @@ function startPeerConnection() {
     // Use addEventListener for track event
     peerConnection.addEventListener('track', event => {
         console.log("🎥 [Client] Received remote track via addEventListener:", event.track.kind);
-        console.log("  [Client] Event:", event); // Log the entire event for inspection
+        console.log("  [Client] Event:", event); // Log the entire event object
+
         if (event.streams && event.streams.length > 0) {
             const remoteStream = event.streams[0];
             console.log("  [Client] Remote stream ID:", remoteStream.id);
             console.log("  [Client] Remote stream tracks:", remoteStream.getTracks().map(track => track.kind));
+
+            const remoteVideoTrack = remoteStream.getVideoTracks()[0];
+            const remoteAudioTrack = remoteStream.getAudioTracks()[0];
+
+            if (remoteVideoTrack) {
+                console.log("  [Client] Found remote video track:", remoteVideoTrack);
+            } else {
+                console.warn("  [Client] No remote video track found in the stream.");
+            }
+
+            if (remoteAudioTrack) {
+                console.log("  [Client] Found remote audio track:", remoteAudioTrack);
+            } else {
+                console.warn("  [Client] No remote audio track found in the stream.");
+            }
 
             if (!remoteVideo.srcObject || remoteVideo.srcObject.id !== remoteStream.id) {
                 remoteVideo.srcObject = remoteStream;
