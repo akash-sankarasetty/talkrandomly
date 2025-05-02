@@ -11,7 +11,7 @@ const searchingMessageElement = document.getElementById('searchingMessage');
 const ws = new WebSocket(`wss://${window.location.host}`);
 
 let peerConnection;
-let localStream = null; // Initialize localStream to null
+let localStream = null;
 let isCaller = false;
 let nsfwModel;
 let isChatting = false;
@@ -29,10 +29,10 @@ nsfwjs.load().then(model => {
     console.log("✅ [Client] NSFWJS model loaded.");
 }).catch(err => {
     console.error("❌ [Client] Failed to load NSFWJS model:", err);
-    alert("Failed to load NSFW detection model.  The app may not function correctly.");
+    alert("Failed to load NSFW detection model.");
 });
 
-// Start local camera and return the stream
+// Start camera
 async function startCamera() {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -43,12 +43,13 @@ async function startCamera() {
         return stream;
     } catch (error) {
         console.error('❗ [Client] Error accessing media devices:', error);
-        alert("Please grant camera and microphone permissions to use this application.");
+        alert("Please grant camera and mic permissions.");
         startChatBtn.disabled = false;
         throw error;
     }
 }
 
+// Searching UI
 function showSearchingAnimation() {
     searchingMessageElement.innerHTML = '<div class="loader"></div> Searching for a stranger...';
     searchingMessageElement.style.display = 'block';
@@ -59,47 +60,45 @@ function hideSearchingAnimation() {
     searchingMessageElement.innerHTML = '';
 }
 
+// Start chat
 startChatBtn.onclick = async () => {
     if (!localStream) {
         try {
             await startCamera();
-            if (localStream) { // Only send 'start_chat' if camera started successfully
+            if (localStream) {
                 ws.send(JSON.stringify({ type: 'start_chat' }));
-                console.log("🔄 [Client] Sent 'start_chat'");
                 startChatBtn.disabled = true;
                 nextBtn.disabled = true;
                 showSearchingAnimation();
             }
         } catch (error) {
             console.error("❌ [Client] Failed to start camera:", error);
-            // Handle camera start failure (already alerted in startCamera)
         }
     } else if (!isChatting) {
         ws.send(JSON.stringify({ type: 'start_chat' }));
-        console.log("🔄 [Client] Sent 'start_chat'");
         startChatBtn.disabled = true;
         nextBtn.disabled = true;
         showSearchingAnimation();
     } else {
-        alert("You are already in a chat. Click 'Next' to find a new partner.");
+        alert("You're already in a chat.");
     }
 };
 
+// Next button
 nextBtn.onclick = () => {
     if (isChatting) {
-        console.log("➡️ [Client] 'Next' button clicked.");
         cleanupConnection();
         ws.send(JSON.stringify({ type: 'next' }));
-        console.log("🔄 [Client] Sent 'next'");
         startChatBtn.disabled = true;
         nextBtn.disabled = true;
         showSearchingAnimation();
         isChatting = false;
     } else {
-        alert("Click 'Start Chat' to find a partner first.");
+        alert("Click 'Start Chat' to begin.");
     }
 };
 
+// WebSocket message handling
 ws.onmessage = async (event) => {
     let rawData = event.data;
     if (rawData instanceof Blob) rawData = await rawData.text();
@@ -107,28 +106,20 @@ ws.onmessage = async (event) => {
 
     console.log("👂 [Client] Received message:", data);
 
-    if (data.type === 'match') {
-        console.log("✅ [Client] Matched with a stranger!");
-        isCaller = true;
-        isChatting = true;
-        if (localStream) {
+    switch (data.type) {
+        case 'match':
+            isCaller = true;
+            isChatting = true;
             startPeerConnection();
             createAndSendOffer();
             startChatBtn.disabled = true;
             nextBtn.disabled = false;
             hideSearchingAnimation();
-        } else {
-            console.error("❌ [Client] localStream is undefined after match.");
-            alert("Error: Local video stream not available after match. Please try again.");
-            startChatBtn.disabled = false;
-            nextBtn.disabled = true;
-            hideSearchingAnimation();
-        }
-    } else if (data.type === 'offer') {
-        console.log("🤝 [Client] Received offer from stranger.");
-        isCaller = false;
-        isChatting = true;
-        if (localStream) {
+            break;
+
+        case 'offer':
+            isCaller = false;
+            isChatting = true;
             startPeerConnection();
             await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
             const answer = await peerConnection.createAnswer();
@@ -137,64 +128,62 @@ ws.onmessage = async (event) => {
             startChatBtn.disabled = true;
             nextBtn.disabled = false;
             hideSearchingAnimation();
-        } else {
-            console.error("❌ [Client] localStream is undefined when receiving offer.");
-            alert("Error: Local video stream not available when receiving offer. Please try again.");
-            // Potentially try to restart camera here?
-        }
-    } else if (data.type === 'answer') {
-        console.log("👍 [Client] Received answer from stranger.");
-        if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
-        }
-    } else if (data.type === 'candidate') {
-        if (data.candidate && peerConnection) {
-            try {
-                await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-            } catch (e) {
-                console.error('❗ [Client] Error adding ICE candidate:', e);
+            break;
+
+        case 'answer':
+            if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
+                await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
             }
-        }
-    } else if (data.type === 'text') {
-        addChatMessage(`Stranger: ${data.text}`);
-    } else if (data.type === 'partner_left') {
-        console.log("💔 [Client] Partner left the chat.");
-        addChatMessage('Stranger left the chat.');
-        cleanupConnection();
-        alert("The stranger has left. Click 'Next' to find a new match.");
-        startChatBtn.disabled = false;
-        nextBtn.disabled = true;
-        isChatting = false;
-    } else if (data.type === 'no_partners') {
-        console.log("ℹ️ [Client] No partners available.");
-        alert("No other users are currently available. Please try again later.");
-        startChatBtn.disabled = false;
-        nextBtn.disabled = true;
-        hideSearchingAnimation();
-    } else if (data.type === 'waiting') {
-        console.log("⏳ [Client] Received 'waiting' message.");
-        searchingMessageElement.innerHTML = '<div class="loader"></div> Waiting for a partner...';
-        searchingMessageElement.style.display = 'block';
+            break;
+
+        case 'candidate':
+            if (data.candidate && peerConnection) {
+                try {
+                    console.log('📥 ICE candidate received:', data.candidate);
+                    await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+                } catch (e) {
+                    console.error('❗ Error adding ICE candidate:', e);
+                }
+            }
+            break;
+
+        case 'text':
+            addChatMessage(`Stranger: ${data.text}`);
+            break;
+
+        case 'partner_left':
+            addChatMessage('Stranger left the chat.');
+            cleanupConnection();
+            alert("Stranger left. Click 'Next' to continue.");
+            startChatBtn.disabled = false;
+            nextBtn.disabled = true;
+            isChatting = false;
+            break;
+
+        case 'no_partners':
+            alert("No partners available. Try again later.");
+            startChatBtn.disabled = false;
+            nextBtn.disabled = true;
+            hideSearchingAnimation();
+            break;
+
+        case 'waiting':
+            searchingMessageElement.innerHTML = '<div class="loader"></div> Waiting for a partner...';
+            searchingMessageElement.style.display = 'block';
+            break;
     }
 };
 
+// Create Peer Connection
 function startPeerConnection() {
     if (peerConnection) return;
-    console.log("⚙️ [Client] Starting peer connection.");
     peerConnection = new RTCPeerConnection(config);
 
-    if (!localStream) {
-        console.error("❌ [Client] localStream is undefined when starting peer connection.");
-        return;
-    }
-
-    // Add all local tracks
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
-        console.log(`➕ [Client] Added local track: ${track.kind}`);
+        console.log(`➕ Added local track: ${track.kind}`);
     });
 
-    // Use addEventListener for track event
     peerConnection.addEventListener('track', (event) => {
         console.log('🎥 Remote track received:', event.track.kind);
         if (event.streams.length > 0) {
@@ -209,24 +198,13 @@ function startPeerConnection() {
             ws.send(JSON.stringify({ type: 'candidate', candidate: event.candidate }));
         }
     };
-    
-    ws.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'candidate') {
-            console.log('📥 ICE candidate received:', data.candidate);
-            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-        }
-    };
 
     peerConnection.oniceconnectionstatechange = () => {
-        console.log("🧊 [Client] ICE Connection State:", peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'disconnected' ||
-            peerConnection.iceConnectionState === 'failed' ||
-            peerConnection.iceConnectionState === 'closed') {
-            console.warn("❗ [Client] ICE connection state changed to:", peerConnection.iceConnectionState);
+        console.log("🧊 ICE Connection State:", peerConnection.iceConnectionState);
+        if (['disconnected', 'failed', 'closed'].includes(peerConnection.iceConnectionState)) {
             addChatMessage('Connection with stranger lost.');
             cleanupConnection();
-            alert("Connection lost. Click 'Next' to find a new match.");
+            alert("Connection lost. Click 'Next' to continue.");
             startChatBtn.disabled = false;
             nextBtn.disabled = true;
             isChatting = false;
@@ -234,33 +212,28 @@ function startPeerConnection() {
     };
 }
 
+// Create and send offer
 async function createAndSendOffer() {
-    if (!peerConnection) {
-        console.error("❌ [Client] Peer connection not initialized when creating offer.");
-        return;
-    }
     try {
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
         ws.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription }));
-        console.log("📤 [Client] Sent offer to stranger.");
+        console.log("📤 Sent offer to stranger.");
     } catch (error) {
-        console.error('❗ [Client] Error creating offer:', error);
-        alert("Error creating offer. Please try again.");
-        startChatBtn.disabled = false;
-        nextBtn.disabled = true;
-        hideSearchingAnimation();
+        console.error('❗ Error creating offer:', error);
+        alert("Failed to start chat. Try again.");
     }
 }
 
+// Chat sending
 sendBtn.onclick = () => {
     const text = messageInput.value.trim();
-    if (text !== '' && isChatting) {
+    if (text && isChatting) {
         addChatMessage(`You: ${text}`);
         ws.send(JSON.stringify({ type: 'text', text }));
         messageInput.value = '';
     } else if (!isChatting) {
-        alert("Please connect to a stranger before sending messages.");
+        alert("Connect to a stranger first.");
     }
 };
 
@@ -271,6 +244,7 @@ messageInput.addEventListener('keypress', (event) => {
     }
 });
 
+// Display chat messages
 function addChatMessage(message) {
     const div = document.createElement('div');
     div.textContent = message;
@@ -278,26 +252,25 @@ function addChatMessage(message) {
     chat.scrollTop = chat.scrollHeight;
 }
 
+// Cleanup
 function cleanupConnection() {
     if (peerConnection) {
-        console.log("🧹 [Client] Closing peer connection.");
         peerConnection.close();
         peerConnection = null;
     }
     if (remoteVideo.srcObject) {
-        console.log("🎬 [Client] Stopping remote video tracks.");
         remoteVideo.srcObject.getTracks().forEach(track => track.stop());
         remoteVideo.srcObject = null;
     }
-    // Keep local stream active
 }
 
+// NSFW detection
 function detectNSFW() {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
 
     function analyzeFrame() {
-        if (!localStream || !nsfwModel || localVideo.videoWidth === 0 || localVideo.videoHeight === 0) {
+        if (!localStream || !nsfwModel || localVideo.videoWidth === 0) {
             setTimeout(analyzeFrame, 1000);
             return;
         }
@@ -309,14 +282,12 @@ function detectNSFW() {
         nsfwModel.classify(canvas).then(predictions => {
             const result = predictions[0];
             const shouldHide = ['Porn', 'Hentai', 'Sexy'].includes(result.className) && result.probability > 0.7;
-
             flowerOverlay.style.display = shouldHide ? 'block' : 'none';
 
             if (shouldHide) {
-                console.warn("⚠️ [Client] NSFW content detected!");
+                console.warn("⚠️ NSFW content detected!");
             }
-        }).catch(error => {
-            console.error("❗ [Client] Error during NSFW classification:", error);
+        }).catch(() => {
             flowerOverlay.style.display = 'none';
         });
 
@@ -326,30 +297,30 @@ function detectNSFW() {
     analyzeFrame();
 }
 
-// Start camera on page load
+// Auto start camera on load
 startCamera().catch(() => {});
 
-// Handle WebSocket connection open event
+// WebSocket open
 ws.onopen = () => {
-    console.log("✅ [Client] WebSocket connection established.");
+    console.log("✅ WebSocket connected.");
     startChatBtn.disabled = false;
     nextBtn.disabled = true;
     hideSearchingAnimation();
 };
 
-// Handle WebSocket connection close event
+// WebSocket closed
 ws.onclose = () => {
-    console.log("❌ [Client] WebSocket connection closed.");
+    console.log("❌ WebSocket disconnected.");
     startChatBtn.disabled = true;
     nextBtn.disabled = true;
     showSearchingAnimation();
-    searchingMessageElement.innerHTML = "Connection to the server lost. Please refresh the page.";
+    searchingMessageElement.innerHTML = "Connection lost. Refresh the page.";
 };
 
-// Handle WebSocket errors
+// WebSocket error
 ws.onerror = (error) => {
-    console.error("❗ [Client] WebSocket error:", error);
-    alert("An error occurred with the server connection.");
+    console.error("❗ WebSocket error:", error);
+    alert("WebSocket connection error.");
     showSearchingAnimation();
-    searchingMessageElement.innerHTML = "An error occurred with the server connection.";
+    searchingMessageElement.innerHTML = "WebSocket error. Please refresh.";
 };
