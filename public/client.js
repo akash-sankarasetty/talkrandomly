@@ -58,13 +58,15 @@ function hideSearchingAnimation() {
 
 startChatBtn.onclick = () => {
     if (!localStream) {
-        startCamera().then(() => { //chain
+        startCamera().then(() => { // Chain the next steps after successful camera start
             ws.send(JSON.stringify({ type: 'start_chat' }));
             console.log("🔄 [Client] Sent 'start_chat'");
             startChatBtn.disabled = true;
             nextBtn.disabled = true;
             showSearchingAnimation();
-        }).catch(()=>{});
+        }).catch(() => {
+            // Handle camera start failure (already alerting in startCamera)
+        });
     } else if (!isChatting) {
         ws.send(JSON.stringify({ type: 'start_chat' }));
         console.log("🔄 [Client] Sent 'start_chat'");
