@@ -11,7 +11,7 @@ const searchingMessageElement = document.getElementById('searchingMessage');
 const ws = new WebSocket(`wss://${window.location.host}`);
 
 let peerConnection;
-let localStream;
+let localStream = null; // Initialize localStream to null
 let isCaller = false;
 let nsfwModel;
 let isChatting = false;
@@ -60,11 +60,13 @@ startChatBtn.onclick = async () => {
     if (!localStream) {
         try {
             await startCamera();
-            ws.send(JSON.stringify({ type: 'start_chat' }));
-            console.log("🔄 [Client] Sent 'start_chat'");
-            startChatBtn.disabled = true;
-            nextBtn.disabled = true;
-            showSearchingAnimation();
+            if (localStream) { // Only send 'start_chat' if camera started successfully
+                ws.send(JSON.stringify({ type: 'start_chat' }));
+                console.log("🔄 [Client] Sent 'start_chat'");
+                startChatBtn.disabled = true;
+                nextBtn.disabled = true;
+                showSearchingAnimation();
+            }
         } catch (error) {
             console.error("❌ [Client] Failed to start camera:", error);
             // Handle camera start failure (already alerted in startCamera)
@@ -113,7 +115,7 @@ ws.onmessage = async (event) => {
             nextBtn.disabled = false;
             hideSearchingAnimation();
         } else {
-            console.error("❌ [Client] localStream is undefined after match. This should not happen.");
+            console.error("❌ [Client] localStream is undefined after match.");
             alert("Error: Local video stream not available after match. Please try again.");
             startChatBtn.disabled = false;
             nextBtn.disabled = true;
@@ -293,12 +295,7 @@ function cleanupConnection() {
         remoteVideo.srcObject.getTracks().forEach(track => track.stop());
         remoteVideo.srcObject = null;
     }
-    // We are keeping the local stream active across connections
-    // if (localVideo.srcObject) {
-    //     localVideo.srcObject.getTracks().forEach(track => track.stop());
-    //     localVideo.srcObject = null;
-    //     localStream = null;
-    // }
+    // Keep local stream active
 }
 
 function detectNSFW() {
@@ -336,12 +333,12 @@ function detectNSFW() {
 }
 
 // Start camera on page load
-startCamera().catch(() => {}); // Don't block if camera fails initially
+startCamera().catch(() => {});
 
 // Handle WebSocket connection open event
 ws.onopen = () => {
     console.log("✅ [Client] WebSocket connection established.");
-    startChatBtn.disabled = false; // Enable start button when connected
+    startChatBtn.disabled = false;
     nextBtn.disabled = true;
     hideSearchingAnimation();
 };
