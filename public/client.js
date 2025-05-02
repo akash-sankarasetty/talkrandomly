@@ -26,24 +26,24 @@ nsfwjs.load().then(model => {
     console.log("✅ [Client] NSFWJS model loaded.");
 }).catch(err => {
     console.error("❌ [Client] Failed to load NSFWJS model:", err);
-    alert("Failed to load NSFW detection model.  The app may not function correctly."); // Inform the user
+    alert("Failed to load NSFW detection model.  The app may not function correctly.");
 });
 
-// Start local camera
-function startCamera() {
-    return navigator.mediaDevices.getUserMedia({ video: true, audio: true }) // Return the promise
-        .then(stream => {
-            localStream = stream;
-            localVideo.srcObject = stream;
-            detectNSFW();
-            return stream; // Return the stream
-        })
-        .catch(error => {
-            console.error('❗ [Client] Error accessing media devices:', error);
-            alert("Please grant camera and microphone permissions to use this application.");
-            startChatBtn.disabled = false; //Re-enable start chat
-            throw error; // Re-throw the error to prevent further execution
-        });
+// Start local camera and return the stream
+async function startCamera() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStream = stream;
+        localVideo.srcObject = stream;
+        detectNSFW();
+        console.log("📹 [Client] Local camera started.");
+        return stream;
+    } catch (error) {
+        console.error('❗ [Client] Error accessing media devices:', error);
+        alert("Please grant camera and microphone permissions to use this application.");
+        startChatBtn.disabled = false;
+        throw error;
+    }
 }
 
 function showSearchingAnimation() {
@@ -53,20 +53,22 @@ function showSearchingAnimation() {
 
 function hideSearchingAnimation() {
     searchingMessageElement.style.display = 'none';
-    searchingMessageElement.innerHTML = ''; // Clear the content
+    searchingMessageElement.innerHTML = '';
 }
 
-startChatBtn.onclick = () => {
+startChatBtn.onclick = async () => {
     if (!localStream) {
-        startCamera().then(() => { // Chain the next steps after successful camera start
+        try {
+            await startCamera();
             ws.send(JSON.stringify({ type: 'start_chat' }));
             console.log("🔄 [Client] Sent 'start_chat'");
             startChatBtn.disabled = true;
             nextBtn.disabled = true;
             showSearchingAnimation();
-        }).catch(() => {
-            // Handle camera start failure (already alerting in startCamera)
-        });
+        } catch (error) {
+            console.error("❌ [Client] Failed to start camera:", error);
+            // Handle camera start failure (already alerted in startCamera)
+        }
     } else if (!isChatting) {
         ws.send(JSON.stringify({ type: 'start_chat' }));
         console.log("🔄 [Client] Sent 'start_chat'");
@@ -104,23 +106,37 @@ ws.onmessage = async (event) => {
         console.log("✅ [Client] Matched with a stranger!");
         isCaller = true;
         isChatting = true;
-        startPeerConnection();
-        createAndSendOffer();
-        startChatBtn.disabled = true;
-        nextBtn.disabled = false;
-        hideSearchingAnimation();
+        if (localStream) {
+            startPeerConnection();
+            createAndSendOffer();
+            startChatBtn.disabled = true;
+            nextBtn.disabled = false;
+            hideSearchingAnimation();
+        } else {
+            console.error("❌ [Client] localStream is undefined after match. This should not happen.");
+            alert("Error: Local video stream not available after match. Please try again.");
+            startChatBtn.disabled = false;
+            nextBtn.disabled = true;
+            hideSearchingAnimation();
+        }
     } else if (data.type === 'offer') {
         console.log("🤝 [Client] Received offer from stranger.");
         isCaller = false;
         isChatting = true;
-        startPeerConnection();
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
-        const answer = await peerConnection.createAnswer();
-        await peerConnection.setLocalDescription(answer);
-        ws.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription }));
-        startChatBtn.disabled = true;
-        nextBtn.disabled = false;
-        hideSearchingAnimation();
+        if (localStream) {
+            startPeerConnection();
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(data.offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            ws.send(JSON.stringify({ type: 'answer', answer: peerConnection.localDescription }));
+            startChatBtn.disabled = true;
+            nextBtn.disabled = false;
+            hideSearchingAnimation();
+        } else {
+            console.error("❌ [Client] localStream is undefined when receiving offer.");
+            alert("Error: Local video stream not available when receiving offer. Please try again.");
+            // Potentially try to restart camera here?
+        }
     } else if (data.type === 'answer') {
         console.log("👍 [Client] Received answer from stranger.");
         if (peerConnection && peerConnection.signalingState === 'have-local-offer') {
@@ -159,37 +175,34 @@ ws.onmessage = async (event) => {
 
 function startPeerConnection() {
     if (peerConnection) return;
-
+    console.log("⚙️ [Client] Starting peer connection.");
     peerConnection = new RTCPeerConnection(config);
+
+    if (!localStream) {
+        console.error("❌ [Client] localStream is undefined when starting peer connection.");
+        return;
+    }
 
     // Add all local tracks
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
+        console.log(`➕ [Client] Added local track: ${track.kind}`);
     });
 
     // Use addEventListener for track event
     peerConnection.addEventListener('track', event => {
         console.log("🎥 [Client] Received remote track via addEventListener:", event.track.kind);
-        console.log("  [Client] Event:", event); // Log the entire event object
-
+        console.log("  [Client] Event:", event);
         if (event.streams && event.streams.length > 0) {
             const remoteStream = event.streams[0];
             console.log("  [Client] Remote stream ID:", remoteStream.id);
             console.log("  [Client] Remote stream tracks:", remoteStream.getTracks().map(track => track.kind));
 
             const remoteVideoTrack = remoteStream.getVideoTracks()[0];
-            const remoteAudioTrack = remoteStream.getAudioTracks()[0];
-
             if (remoteVideoTrack) {
                 console.log("  [Client] Found remote video track:", remoteVideoTrack);
             } else {
                 console.warn("  [Client] No remote video track found in the stream.");
-            }
-
-            if (remoteAudioTrack) {
-                console.log("  [Client] Found remote audio track:", remoteAudioTrack);
-            } else {
-                console.warn("  [Client] No remote audio track found in the stream.");
             }
 
             if (!remoteVideo.srcObject || remoteVideo.srcObject.id !== remoteStream.id) {
@@ -225,20 +238,23 @@ function startPeerConnection() {
     };
 }
 
-function createAndSendOffer() {
-    peerConnection.createOffer()
-        .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => {
-            ws.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription }));
-            console.log("📤 [Client] Sent offer to stranger.");
-        })
-        .catch(error => {
-            console.error('❗ [Client] Error creating offer:', error);
-            alert("Error creating offer. Please try again.");
-            startChatBtn.disabled = false;
-            nextBtn.disabled = true;
-            hideSearchingAnimation();
-        });
+async function createAndSendOffer() {
+    if (!peerConnection) {
+        console.error("❌ [Client] Peer connection not initialized when creating offer.");
+        return;
+    }
+    try {
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        ws.send(JSON.stringify({ type: 'offer', offer: peerConnection.localDescription }));
+        console.log("📤 [Client] Sent offer to stranger.");
+    } catch (error) {
+        console.error('❗ [Client] Error creating offer:', error);
+        alert("Error creating offer. Please try again.");
+        startChatBtn.disabled = false;
+        nextBtn.disabled = true;
+        hideSearchingAnimation();
+    }
 }
 
 sendBtn.onclick = () => {
@@ -277,11 +293,12 @@ function cleanupConnection() {
         remoteVideo.srcObject.getTracks().forEach(track => track.stop());
         remoteVideo.srcObject = null;
     }
-    if (localVideo.srcObject) {
-        console.log("📹 [Client] Stopping local video tracks.");
-        localVideo.srcObject.getTracks().forEach(track => track.stop());
-        localVideo.srcObject = null;
-    }
+    // We are keeping the local stream active across connections
+    // if (localVideo.srcObject) {
+    //     localVideo.srcObject.getTracks().forEach(track => track.stop());
+    //     localVideo.srcObject = null;
+    //     localStream = null;
+    // }
 }
 
 function detectNSFW() {
@@ -308,7 +325,7 @@ function detectNSFW() {
                 console.warn("⚠️ [Client] NSFW content detected!");
             }
         }).catch(error => {
-            console.error("❗ [Client] Error during NSFW classification:", error); //error
+            console.error("❗ [Client] Error during NSFW classification:", error);
             flowerOverlay.style.display = 'none';
         });
 
@@ -319,14 +336,14 @@ function detectNSFW() {
 }
 
 // Start camera on page load
-startCamera();
+startCamera().catch(() => {}); // Don't block if camera fails initially
 
 // Handle WebSocket connection open event
 ws.onopen = () => {
     console.log("✅ [Client] WebSocket connection established.");
     startChatBtn.disabled = false; // Enable start button when connected
     nextBtn.disabled = true;
-    hideSearchingAnimation(); // Hide initial "Waiting..." message on reconnect
+    hideSearchingAnimation();
 };
 
 // Handle WebSocket connection close event
@@ -334,7 +351,7 @@ ws.onclose = () => {
     console.log("❌ [Client] WebSocket connection closed.");
     startChatBtn.disabled = true;
     nextBtn.disabled = true;
-    showSearchingAnimation(); // Show loading on disconnect as well
+    showSearchingAnimation();
     searchingMessageElement.innerHTML = "Connection to the server lost. Please refresh the page.";
 };
 
@@ -342,6 +359,6 @@ ws.onclose = () => {
 ws.onerror = (error) => {
     console.error("❗ [Client] WebSocket error:", error);
     alert("An error occurred with the server connection.");
-    showSearchingAnimation(); // Show loading on error as well
+    showSearchingAnimation();
     searchingMessageElement.innerHTML = "An error occurred with the server connection.";
 };
