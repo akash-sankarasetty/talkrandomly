@@ -19,13 +19,15 @@ let isChatting = false;
 const iceConfiguration = {
     iceServers: [
         {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credentials: 'openrelayproject'
+            urls: 'stun:stun.l.google.com:19302' // STUN server for fallback
+        },
+        {
+            urls: 'turn:global.xirsys.net:443', // Xirsys TURN server
+            username: 'talkrandomly1', // Your Xirsys username
+            credential: '76c41f68-27bf-11f0-a08f-0242ac150003' // Your Xirsys secret
         }
     ]
 };
-
 
 
 // Load NSFW model
