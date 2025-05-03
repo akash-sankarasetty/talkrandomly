@@ -317,11 +317,10 @@ ws.onopen = () => {
 };
 
 ws.onclose = () => {
-    console.log("❌ WebSocket disconnected.");
-    startChatBtn.disabled = true;
-    nextBtn.disabled = true;
-    showSearchingAnimation();
-    searchingMessageElement.innerHTML = "Connection lost. Refresh the page.";
+    console.log("❌ WebSocket disconnected. Reconnecting...");
+    setTimeout(() => {
+        ws = new WebSocket(websocketURL);
+    }, 5000); // Retry after 5 seconds
 };
 
 ws.onerror = (error) => {
