@@ -19,12 +19,19 @@ let isChatting = false;
 const iceConfiguration = {
     iceServers: [
         {
-            urls: 'stun:stun.l.google.com:19302' // STUN server for fallback
+            urls: ["stun:bn-turn1.xirsys.com"] // Xirsys STUN server
         },
         {
-            urls: 'turn:global.xirsys.net:443', // Xirsys TURN server
-            username: 'talkrandomly1', // Your Xirsys username
-            credential: '76c41f68-27bf-11f0-a08f-0242ac150003' // Your Xirsys secret
+            username: "Sa5J4AtYBBruPjcQIM0eTuNuT01YbJNFuV3hu_vasOu8lxb2Na8JpcXd8VmI8F1sAAAAAGgVh6d0YWxrcmFuZG9tbHkx", // Xirsys username
+            credential: "470576d0-27cb-11f0-a54a-0242ac140004", // Xirsys credential
+            urls: [
+                "turn:bn-turn1.xirsys.com:80?transport=udp",
+                "turn:bn-turn1.xirsys.com:3478?transport=udp",
+                "turn:bn-turn1.xirsys.com:80?transport=tcp",
+                "turn:bn-turn1.xirsys.com:3478?transport=tcp",
+                "turns:bn-turn1.xirsys.com:443?transport=tcp",
+                "turns:bn-turn1.xirsys.com:5349?transport=tcp"
+            ] // Xirsys TURN server URLs
         }
     ]
 };
