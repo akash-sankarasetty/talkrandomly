@@ -16,12 +16,17 @@ let isCaller = false;
 let nsfwModel;
 let isChatting = false;
 
-const config = {
+const iceConfiguration = {
     iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:turn.anyfirewall.com:443', username: 'webrtc', credential: 'webrtc' }
+        {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credentials: 'openrelayproject'
+        }
     ]
 };
+
+
 
 // Load NSFW model
 nsfwjs.load().then(model => {
