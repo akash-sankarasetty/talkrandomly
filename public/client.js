@@ -8,8 +8,11 @@ const startChatBtn = document.getElementById('startChatBtn');
 const nextBtn = document.getElementById('nextBtn');
 const searchingMessageElement = document.getElementById('searchingMessage');
 
-const ws = new WebSocket(`wss://${window.location.host}`);
+// --- WebSocket Logic ---
+const websocketURL = `wss://${window.location.host}`; // Modify if your WebSocket server is elsewhere
+const ws = new WebSocket(websocketURL);
 
+// --- Peer Connection Logic ---
 let peerConnection;
 let localStream = null;
 let isCaller = false;
@@ -18,12 +21,10 @@ let isChatting = false;
 
 const iceConfiguration = {
     iceServers: [
+        { urls: ["stun:bn-turn1.xirsys.com"] },
         {
-            urls: ["stun:bn-turn1.xirsys.com"] // Xirsys STUN server
-        },
-        {
-            username: "Sa5J4AtYBBruPjcQIM0eTuNuT01YbJNFuV3hu_vasOu8lxb2Na8JpcXd8VmI8F1sAAAAAGgVh6d0YWxrcmFuZG9tbHkx", // Xirsys username
-            credential: "470576d0-27cb-11f0-a54a-0242ac140004", // Xirsys credential
+            username: "Sa5J4AtYBBruPjcQIM0eTuNuT01YbJNFuV3hu_vasOu8lxb2Na8JpcXd8VmI8F1sAAAAAGgVh6d0YWxrcmFuZG9tbHkx",
+            credential: "470576d0-27cb-11f0-a54a-0242ac140004",
             urls: [
                 "turn:bn-turn1.xirsys.com:80?transport=udp",
                 "turn:bn-turn1.xirsys.com:3478?transport=udp",
@@ -31,11 +32,14 @@ const iceConfiguration = {
                 "turn:bn-turn1.xirsys.com:3478?transport=tcp",
                 "turns:bn-turn1.xirsys.com:443?transport=tcp",
                 "turns:bn-turn1.xirsys.com:5349?transport=tcp"
-            ] // Xirsys TURN server URLs
+            ]
         }
+        // Consider fetching these from your backend for security
+        // {
+        //     urls: await fetch('/api/get-ice-servers').then(res => res.json())
+        // }
     ]
 };
-
 
 // Load NSFW model
 nsfwjs.load().then(model => {
@@ -56,7 +60,7 @@ async function startCamera() {
         return stream;
     } catch (error) {
         console.error('❗ [Client] Error accessing media devices:', error);
-        alert("Please grant camera and mic permissions.");
+        alert("Camera and microphone permissions are required to start chatting.");
         startChatBtn.disabled = false;
         throw error;
     }
@@ -84,6 +88,7 @@ startChatBtn.onclick = async () => {
             }
         } catch (error) {
             console.error("❌ [Client] Failed to start camera:", error);
+            // startChatBtn remains disabled due to the error handling in startCamera
         }
     } else if (!isChatting) {
         ws.send(JSON.stringify({ type: 'start_chat' }));
@@ -185,7 +190,7 @@ ws.onmessage = async (event) => {
 
 function startPeerConnection() {
     if (peerConnection) return;
-    peerConnection = new RTCPeerConnection(config);
+    peerConnection = new RTCPeerConnection(iceConfiguration);
 
     localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
@@ -276,7 +281,7 @@ function detectNSFW() {
 
     function analyzeFrame() {
         if (!localStream || !nsfwModel || localVideo.videoWidth === 0) {
-            setTimeout(analyzeFrame, 1000);
+            requestAnimationFrame(analyzeFrame);
             return;
         }
 
@@ -296,7 +301,7 @@ function detectNSFW() {
             flowerOverlay.style.display = 'none';
         });
 
-        setTimeout(analyzeFrame, 1000);
+        requestAnimationFrame(analyzeFrame);
     }
 
     analyzeFrame();
