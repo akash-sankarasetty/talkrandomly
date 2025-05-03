@@ -118,8 +118,7 @@ ws.onmessage = async (event) => {
     if (rawData instanceof Blob) rawData = await rawData.text();
     const data = JSON.parse(rawData);
 
-    console.log("👂 [Client] Received message:", data);
-
+    console.log("👂 [Client] Received message:", data); 
     switch (data.type) {
         case 'match':
             isCaller = true;
