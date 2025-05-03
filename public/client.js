@@ -9,7 +9,7 @@ const nextBtn = document.getElementById('nextBtn');
 const searchingMessageElement = document.getElementById('searchingMessage');
 
 // --- WebSocket Logic ---
-const websocketURL = `wss://${window.location.host}`; // Modify if your WebSocket server is elsewhere
+const websocketURL = "wss://talkrandomly.onrender.com";
 const ws = new WebSocket(websocketURL);
 
 // --- Peer Connection Logic ---
